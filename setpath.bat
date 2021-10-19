@@ -1,0 +1,1 @@
+path=c:\msys64\mingw64\bin;%path%
