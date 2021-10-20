@@ -3,6 +3,8 @@
 Project 4 ~ Caleb Schwartz ~ Evan Haaland
 10/16/2021
 
+C:\Users\caleb\Documents\GitHub\project4
+
 */
 
 #include <stdio.h>
@@ -37,10 +39,11 @@ if (input[1] == NULL) {
 	int  clockDuration = 0;
 	runways r = malloc(sizeof(struct rtype));
 	fscanf(fileName, "%d\n", &clockDuration);
+	if (clockDuration == -1) return 0;
 	fscanf(fileName, "%d\n", &r->numRunways);
 		
 	
-	printf("clockDuration: %d", clockDuration);
+	printf("clockDuration: %d\n", clockDuration);
 	printf("numRunways: %d\n", r->numRunways);
 	
 	
@@ -51,6 +54,7 @@ FILE *errorCheck(char *fileName){
 	FILE *ptr = fopen(fileName, "r");
 	if (errno) {
 		printf("[ERROR] file '%s' not found.", fileName);
+		exit(0);
 	}
 		
 	return ptr;
