@@ -24,7 +24,7 @@ int landTime;
 int toLand;
 int people;
 int timeSpent;
-
+int *status;
 };
 
 typedef struct ptype *planes; //we use planes as the name for variable.
@@ -37,7 +37,7 @@ struct rtype{
 	int currentRunway;
 	//runways *next; don't want a list
 	planes currentPlane; //we store what plane is currently at that runway
-	bool isBusy;
+	bool isNotBusy;
 	int timeLeft;
 };
 
@@ -49,7 +49,7 @@ runways* landing(runways*,planes,int);
 
 void printStats(int,int,int,int,float,int,int);
 void freeWaiting(planes);
-bool isEmpty(runways*);
+bool isEmpty(runways*,int);
 planes setEmpty (planes);
 int amountBusy(runways*,int);
 
@@ -65,7 +65,7 @@ if (input[1] == NULL) {
 	//printf("%s", input[1]);
 	
 	planes waiting = malloc(sizeof(struct ptype));
-	//waiting->name = malloc(sizeof(char)*MAX_STRING); //the waiting area - we store planes in this one at a time.
+	waiting->status = malloc(sizeof(int)); //the waiting area - we store planes in this one at a time.
 	int  clockDuration = 0;
 	int numRunways = 0;
 	
@@ -73,6 +73,13 @@ if (input[1] == NULL) {
 	if (clockDuration == -1) return 0;
 	fscanf(fileName, "%d\n", &numRunways);
 	runways *r = malloc(sizeof(struct rtype)*MAX_RUNWAYS);
+	//r->currentPlane = malloc(sizeof(struct ptype));
+	
+	for(int i = 0; i < MAX_STRING; i++){
+		r[i].currentPlane = malloc(sizeof(struct ptype));
+	}
+
+	//r->currentPlane-> = malloc(sizeof(struct ptype));
 	//waiting = moveInto(waiting, fileName);
 		
 	
@@ -86,27 +93,31 @@ if (input[1] == NULL) {
 
 	waiting = setEmpty(waiting);
 	int busy = 0;
+
 	while (clockDuration != 0  ) {
-		
+		//printf("While loop iterations: \n");	
 		if(waiting->landTime == 0) { //get this conditional working
 			//I was thinking of checking if their is a name assigned to the waiting room to check if it is empty
 		waiting = moveInto(waiting, fileName);
-			printf("landTime: %d  Name: %s People: %d   Landing: %d\n",waiting->landTime,waiting->name,waiting->people,waiting->timeSpent );
+			//printf("landTime: %d  Name: %s People: %d   Landing: %d\n",waiting->landTime,waiting->name,waiting->people,waiting->timeSpent );
 
 		}
-		 if (waiting->landTime != 0) {
+		 if (waiting->status != 0) {
+			//printf("DEBUG\n");
 			if (waiting->landTime <=clockDuration){
+			//	printf("DEBUG\n");
 				r = landing(r,waiting,numRunways);
-				 	
+				 	//printf("DEBUG(1)\n");
 
 				 waiting=setEmpty(waiting);//set waiting room to zero (create a function for this)
-				
+				//busy = amountBusy(r,numRunways);
+				//printf("DEBUG\n");
+		//printf("amount busy %d\n" , busy);
 				//printf("landTime: %d  Name: %s People: %d   Landing: %d\n",waiting->landTime,waiting->name,waiting->people,waiting->timeSpent );
 
 			}
 		}
-		 busy = amountBusy(r,numRunways);
-		printf("amount busy %d\n" , busy);
+		 
 		
 		clockDuration--;
 	}
@@ -145,6 +156,7 @@ fscanf(fileName, "%d ", &room->landTime);
 fscanf(fileName, "%s", room->name);
 fscanf(fileName, "%d", &room->people);
 fscanf(fileName, "%d\n", &room->timeSpent);
+room->status = 1;
 //printf("landTime: %d  Name: %s People: %d   Landing: %d\n",waiting.landTime,waiting.name,waiting.people,waiting.timeSpent );
 //read into file to find what needs to be added for the plane.
 //assign these values to what is in waiting room.
@@ -154,12 +166,26 @@ return room;
 
 runways* landing(runways* track,planes toLand,int amountRunways) {
 
-for(int i = 0;  i < amountRunways; i++){
-	track->isBusy = isEmpty(track);
+for (int i = 0;  i < amountRunways; i++){
+	//printf("DEBUG\n");
+	//printf("Cell 1 check %d\n" ,track[0].isNotBusy);
+	track[i].isNotBusy = isEmpty(track,i);
+					//printf("is the runway busy (0=yes, 1=no) at runway #%d :%d\n", i,track[i].isNotBusy);
 
-	if(track->isBusy == false){ //if track is busy
+printf("Cell 0 check %d\n" ,track[0].isNotBusy);
+printf("Plane 0 check %d\n" ,track[0].currentPlane->status);
+printf("Cell 1 check %d\n" ,track[1].isNotBusy);
+printf("Plane 1 check %d\n" ,track[1].currentPlane->status);
+printf("Cell 2 check %d\n" ,track[2].isNotBusy);
+printf("Plane 2 check %d\n" ,track[2].currentPlane->status);
+	if(track[i].isNotBusy == true){ //if track is not
+		//printf("is the runway busy (0=yes, 1=no) at runway #%d :%d\n", i,track[i].isNotBusy);
 		track[i].currentPlane = toLand;
+		//printf("DEBUG\n");
+		printf("is the runway busy (0=yes, 1=no) at runway #%d :%d\n", i,track[i].isNotBusy);
+		return track;
 		}
+	//printf("DEBUG\n");
 	}
 	return track;
 }
@@ -178,24 +204,31 @@ toEmpty->toLand = 0;
 toEmpty->people = 0;
 toEmpty->timeSpent = 0;
 toEmpty->name[0] = '0';
+toEmpty->status = 0;
 
 return toEmpty;
 
 }
 
-bool isEmpty(runways* current) {
-if (current->currentPlane->name == '0'){
+bool isEmpty(runways* current,int z) {
+//printf("DEBUG\n");
+
+if (current[z].currentPlane->status == 0){
+//printf("DEBUG\n");
+
 	return true; //true if empty - returns 1
 }
 else {
+
 return false;
 }
+
 }
 
 int amountBusy(runways* listRunways,int totalRunways) {
 	int counter = 0;
 	for(int i = 0; i < totalRunways; i++) {
-		if (listRunways[i].isBusy == 0) {
+		if (listRunways[i].isNotBusy == 0) {
 			counter++;
 		}
 	}
