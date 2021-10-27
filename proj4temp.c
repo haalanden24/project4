@@ -60,6 +60,7 @@ void decrementTime(runways*,int);
 int timeIsUp(runways*, int);
 void moveOffRunway(runways*, int , int );
 void setRunwayData(runways*, int, planes, int);
+void printRunwaysBusy(runways*, int);
 
 int main (int x, char *input[]){
 
@@ -154,13 +155,15 @@ if (input[1] == NULL) {
 			if(debug)printf("	moved plane into waiting room\n");
 			idFlag = 1;
 			waiting->id = idTracker;
+			
 			//printf("id number: %d, idealTime: %d  Name: %s People: %d   Landing: %d\n",waiting->id, waiting->idealTime,waiting->name,waiting->people,waiting->timeRequired );
 			if(al)printf("	endif\n");			
 						
                                           
 			
 		}
-		//else waiting->id = idTracker;
+		if(timeCounter > waiting->idealTime) waiting->circled = timeCounter - waiting->idealTime;
+		
 						#ifdef ECHO
 						printf("  -- waiting to land: [#%d: %s,schedule:%d,needed-to-land:%d,#onboard:%d,circled:%d]\n", waiting->id, waiting->name, waiting->idealTime, waiting->timeRequired, waiting->people, waiting->circled);
 						#endif
@@ -226,6 +229,7 @@ if (input[1] == NULL) {
 			
 		
 	}
+	printRunwaysBusy(r, numRunways);
 	if(idFlag)idTracker++;
 	clockDuration--;
 	
@@ -387,10 +391,10 @@ int timeIsUp(runways* r, int i){
 
 // }
 
-int amountBusy(runways* listRunways,int totalRunways) {
+int amountBusy(runways* r,int totalRunways) {
 	int counter = 0;
 	for(int i = 0; i < totalRunways; i++) {
-		if (listRunways[i].isBusy == 1) {
+		if (r[i].isBusy) {
 			counter++;
 		}
 	}
@@ -423,6 +427,23 @@ void setRunwayData(runways *r, int i, planes p,int idTracker){
 	
 	
 	
+}
+
+void printRunwaysBusy(runways *r, int numRunways){
+	#ifdef ECHO
+	int counter = amountBusy(r, numRunways);
+	printf("  -- runways busy: ");
+	for(int i = 0; i < numRunways; i++){
+		if (r[i].isBusy && i < counter-1) printf("#%d,", i+1);
+		else if(r[i].isBusy) printf("#%d", i+1);
+	}
+	
+	// for(int i = 0; i < counter; i++){
+		// if (i < counter-1) printf("#%d,", i+1);
+		// else printf("#%d", i+1);
+	// }
+	printf(" of %d",numRunways);
+	#endif
 }
 /*
 void printStats(int simLength, int numLanded, int passengers, int runways, float usage, int delayed, int timeDelay){
