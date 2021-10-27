@@ -8,7 +8,6 @@ C:\Users\caleb\Documents\GitHub\project4
 #include <string.h>
 #include <stdlib.h>	
 #include <stdbool.h>
-#include <errno.h> // may be different for each operating system.
 
 
 #define MAX_STRING 80
@@ -16,7 +15,7 @@ C:\Users\caleb\Documents\GitHub\project4
 #define INPUT_SENTINEL -1
 #define al 0
 #define debug 0
-#define ECHO 1
+//#define ECHO 0
 FILE *errorCheck(char *fileName);
 
 struct ptype {
@@ -52,7 +51,6 @@ planes moveInto(planes,FILE*);
 runways* landing(runways*,planes,int);
 
 void printStats(int,int,int,int,float,int,int);
-void freeWaiting(planes);
 bool isEmpty(runways*,int);
 planes setEmpty (planes, int);
 int amountBusy(runways*,int);
@@ -61,13 +59,14 @@ int timeIsUp(runways*, int);
 void moveOffRunway(runways*, int , int );
 void setRunwayData(runways*, int, planes, int);
 void printRunwaysBusy(runways*, int);
+void freeEverything(runways*, planes, int);
 
 int main (int x, char *input[]){
-
+printf("Project #4 - Caleb Schwartz & Evan Haaland");
 
 
 if (input[1] == NULL) {
-	printf("[ERROR] no input file on command line.\n");
+	printf("\n[ERROR] no input file on command line.\n");
 	return 0;
 	} 
 
@@ -75,12 +74,18 @@ if (input[1] == NULL) {
 	
 	planes waiting = malloc(sizeof(struct ptype));
 
-	int  clockDuration = 0;
+	int clockDuration = 0;
 	int numRunways = 0;
 	int selectedRunway = -1;
-	int idTracker = 0;
-	int idFlag = 0;
+	int idTracker = -1;
 	int timeCounter = 0;
+	float numBusy = 0;
+	
+	int planesLanded = 0;
+	int totalPeople = 0;
+	float runwayUsage = 0;
+	int planesDelayed = 0;
+	int timeDelayed = 0;
 
 	fscanf(fileName, "%d\n", &clockDuration);                            //inputs clock duration 
 	if (clockDuration == -1) return 0;                                   //checks if very first input is -1 only
@@ -96,27 +101,29 @@ if (input[1] == NULL) {
 
 	
 	waiting = setEmpty(waiting, idTracker);
-	waiting->id = 0;
+	//waiting->id = 0;
 	while (clockDuration != 0) {
-		idFlag = 0;
 		timeCounter++;
-		printf("\n\n****t = %d****\n\n", timeCounter);
+		#ifdef ECHO
+		printf("\n**** time = %d ****", timeCounter);
+		#endif
 		if(waiting->status == 0) {
-			printf("first if\n");
-			waiting = moveInto(waiting, fileName);
-			idFlag = 1;
-			waiting->id = idTracker;	                                          
-			
+			fscanf(fileName, "%d ", &waiting->idealTime);
+			if(waiting->idealTime != -1){
+				idTracker++;
+				waiting = moveInto(waiting, fileName);
+				waiting->id = idTracker;
+			}
 		}
 		
 		if(timeCounter > waiting->idealTime) waiting->circled = timeCounter - waiting->idealTime;
 		
 		#ifdef ECHO
-		printf("  -- waiting to land: [#%d: %s,schedule:%d,needed-to-land:%d,#onboard:%d,circled:%d]\n", waiting->id, waiting->name, waiting->idealTime, waiting->timeRequired, waiting->people, waiting->circled);
+		if(waiting->status)printf("\n  -- waiting to land: [#%d: %s,schedule:%d,needed-to-land:%d,#onboard:%d,circled:%d]", waiting->id, waiting->name, waiting->idealTime, waiting->timeRequired, waiting->people, waiting->circled);
 		#endif
 			
 		if (waiting->status != 0) {
-			if (waiting->idealTime <= clockDuration){
+			if (waiting->idealTime <= timeCounter){
 				
 				for(int i = 0; i < numRunways; i++){
 					if(!r[i].isBusy){
@@ -125,7 +132,7 @@ if (input[1] == NULL) {
 						r[i].timeLeft = waiting->timeRequired;
 						r[i].isBusy = 1;
 						#ifdef ECHO
-						printf("  -- landing runway %d: [#%d: %s,schedule:%d,needed-to-land:%d,#onboard:%d,circled:%d]\n", i+1, r[i].currentPlane->id, r[i].currentPlane->name, r[i].currentPlane->idealTime,r[i].currentPlane->timeRequired, r[i].currentPlane->people, r[i].currentPlane->circled);
+						printf("\n  -- landing runway %d: [#%d: %s,schedule:%d,needed-to-land:%d,#onboard:%d,circled:%d]", i+1, r[i].currentPlane->id, r[i].currentPlane->name, r[i].currentPlane->idealTime,r[i].currentPlane->timeRequired, r[i].currentPlane->people, r[i].currentPlane->circled);
 						#endif
 						
 						waiting = setEmpty(waiting, idTracker);
@@ -145,17 +152,36 @@ if (input[1] == NULL) {
 		decrementTime(r, i);						
 		selectedRunway = timeIsUp(r, i);	
 			if(selectedRunway >= 0){
+				totalPeople += r[selectedRunway].currentPlane->people;
 				moveOffRunway(r, selectedRunway, numRunways);
+				if(r[selectedRunway].currentPlane->circled){
+					 planesDelayed++;
+					 timeDelayed += r[selectedRunway].currentPlane->circled;
+				}
 				
+				planesLanded++;
 			} 
 			
 		
 	}
 	printRunwaysBusy(r, numRunways);
-	if(idFlag)idTracker++;
+	
+	numBusy += amountBusy(r, numRunways);
 	clockDuration--;
 	
 	}
+	float numRunwaysFloat = (float) numRunways;
+	runwayUsage = (numBusy/(numRunwaysFloat*timeCounter)*100);
+	printf("\nSimulation length: %d", timeCounter);
+	
+	printf("\nPlanes landed: %d", planesLanded);
+	printf("\nTotal passengers: %d", totalPeople);
+	printf("\nTotal runways: %d", numRunways);
+	printf("\nRunway usage: %.1f%%", runwayUsage);
+	printf("\nPlanes delayed: %d", planesDelayed);
+	printf("\nTotal time delayed: %d", timeDelayed);
+	
+	freeEverything(r, waiting, numRunways);
 	return 0;
 	}
 
@@ -163,8 +189,8 @@ if (input[1] == NULL) {
 FILE *errorCheck(char *fileName){
 	FILE *ptr = fopen(fileName, "r");
 		
-		if (errno) {
-			printf("[ERROR] file '%s' not found.\n", fileName);
+		if (ptr == NULL) {
+			printf("\n[ERROR] file '%s' not found.\n", fileName);
 			exit(0);
 		}
 		
@@ -181,7 +207,7 @@ void input2(){
 
 planes moveInto(planes room, FILE* fileName) {
 
-	fscanf(fileName, "%d ", &room->idealTime);
+	//fscanf(fileName, "%d ", &room->idealTime);
 	fscanf(fileName, "%s", room->name);
 	fscanf(fileName, "%d", &room->people);
 	fscanf(fileName, "%d\n", &room->timeRequired);
@@ -191,8 +217,11 @@ planes moveInto(planes room, FILE* fileName) {
 return room;
 }
 
-void freeWaiting(planes waitingRoom) {
-
+void freeEverything(runways *r, planes waitingRoom, int numRunways) {
+	for(int i = 0; i < numRunways; i++){
+		free(r[i].currentPlane);
+	}
+	free(r);
 	free(waitingRoom);
 }
 
@@ -213,7 +242,7 @@ toEmpty->idealTime = 0;
 toEmpty->toLand = 0;
 toEmpty->people = 0;
 toEmpty->timeRequired = 0;
-toEmpty->name[0] = '0';
+sprintf(toEmpty->name, " ");
 toEmpty->status = 0;
 toEmpty->circled = 0;
 
@@ -239,19 +268,16 @@ int amountBusy(runways* r,int totalRunways) {
 
 void moveOffRunway(runways *r, int index, int numRunways){
 	#ifdef ECHO
-	printf("  -- moving off runway #%d: [#%d: %s,schedule:%d,needed-to-land:%d,#onboard:%d,circled:%d]\n", index+1, r[index].currentPlane->id, r[index].currentPlane->name, r[index].currentPlane->idealTime,r[index].currentPlane->timeRequired, r[index].currentPlane->people, r[index].currentPlane->circled);
+	printf("\n  -- moving off runway #%d: [#%d: %s,schedule:%d,needed-to-land:%d,#onboard:%d,circled:%d]", index+1, r[index].currentPlane->id, r[index].currentPlane->name, r[index].currentPlane->idealTime,r[index].currentPlane->timeRequired, r[index].currentPlane->people, r[index].currentPlane->circled);
 	#endif
 	r[index].isBusy = 0;
 	r[index].timeLeft = -1;
 }
 
 void setRunwayData(runways *r, int i, planes p,int idTracker){
+	
 	r[i].currentPlane->id = idTracker;
-	int j = 0;
-	while(p->name[j] != '\0'){
-		r[i].currentPlane->name[j] = p->name[j];
-		j++;
-	}
+	sprintf(r[i].currentPlane->name, "%s", p->name);
 	r[i].currentPlane->idealTime = p->idealTime;
 	r[i].currentPlane->timeRequired = p->timeRequired;
 	r[i].currentPlane->people = p->people;
@@ -263,23 +289,17 @@ void setRunwayData(runways *r, int i, planes p,int idTracker){
 void printRunwaysBusy(runways *r, int numRunways){
 	#ifdef ECHO
 	int counter = amountBusy(r, numRunways);
-	printf("  -- runways busy: ");
+	if (counter > 1) printf("\n  -- runways busy: ");
+	else if (counter) printf("\n  -- runway busy: ");
 	for(int i = 0; i < numRunways; i++){
 		if (r[i].isBusy && i < counter-1) printf("#%d,", i+1);
-		else if(r[i].isBusy) printf("#%d", i+1);
+		else if(r[i].isBusy){
+			 printf("#%d", i+1);
+			 printf(" of %d",numRunways);
+		}
 	}
 	
-	printf(" of %d",numRunways);
+	
 	#endif
 }
-/*
-void printStats(int simLength, int numLanded, int passengers, int runways, float usage, int delayed, int timeDelay){
-printf("Project 4 --Caleb Schwartz & Evan Haaland \n");
-printf("Simulation length : &d \n" , simLength);
-printf("Planes landed: %d\n" , numLanded);
-printf("Total passengers: %d\n" , passengers);
-printf("Runway usage: %.1f%%\n",usage);
-printf("Planes delayed: %d\n", delayed);
-printf("Total time delayed: %d \n", timeDelay);
-}
-*/
+
