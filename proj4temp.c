@@ -14,17 +14,19 @@ C:\Users\caleb\Documents\GitHub\project4
 #define MAX_STRING 80
 #define MAX_RUNWAYS 8
 #define INPUT_SENTINEL -1
-#define al 1
+#define al 0
 #define debug 0
+#define ECHO 1
 FILE *errorCheck(char *fileName);
 
 struct ptype {
 	int id;
 	char name[MAX_STRING];
-	int landTime;
+	int idealTime;
 	int toLand;
 	int people;
-	int timeSpent;
+	int timeRequired;
+	int circled;
 	int status;
 };
 
@@ -52,11 +54,12 @@ runways* landing(runways*,planes,int);
 void printStats(int,int,int,int,float,int,int);
 void freeWaiting(planes);
 bool isEmpty(runways*,int);
-planes setEmpty (planes);
+planes setEmpty (planes, int);
 int amountBusy(runways*,int);
-void decrementTimes(runways*,int);
+void decrementTime(runways*,int);
 int timeIsUp(runways*, int);
 void moveOffRunway(runways*, int , int );
+void setRunwayData(runways*, int, planes, int);
 
 int main (int x, char *input[]){
 
@@ -77,6 +80,9 @@ if (input[1] == NULL) {
 	int  clockDuration = 0;
 	int numRunways = 0;
 	int selectedRunway = -1;
+	int idTracker = 0;
+	int idFlag = 0;
+	int timeCounter = 0;
 	
 	if (al) printf("input simulation duration & number of runways\n");
 	if (al) printf("set clock to initial value\n");
@@ -108,8 +114,7 @@ if (input[1] == NULL) {
 	//waiting=setEmpty(waiting);//set waiting room to zero (create a function for this)
 		
 	if (al) printf("set plane waiting area to empty\n");
-	waiting = setEmpty(waiting);
-	int busy = 0;
+	waiting = setEmpty(waiting, idTracker);
 	//
 	//
 	//
@@ -134,37 +139,53 @@ if (input[1] == NULL) {
 	//
 	//
 	//
+	waiting->id = 0;
 	while (clockDuration != 0) {
-		
-		printf("\n\n****t = %d****\n\n", clockDuration);
+		idFlag = 0;
+		timeCounter++;
+		printf("\n\n****t = %d****\n\n", timeCounter);
 		if (al) printf("while there's still time left (loops once per clock tick) do\n");
 		if(waiting->status == 0) { //get this conditional working
-			
+			printf("first if\n");
 			if (al) printf("	if there's input & the plane waiting area is empty then\n");
 			if(debug)printf("\n	first if\n");
 			waiting = moveInto(waiting, fileName);
 			if(al) printf("		load next plane into waiting area\n");
 			if(debug)printf("	moved plane into waiting room\n");
-			printf("landTime: %d  Name: %s People: %d   Landing: %d\n",waiting->landTime,waiting->name,waiting->people,waiting->timeSpent );
+			idFlag = 1;
+			waiting->id = idTracker;
+			//printf("id number: %d, idealTime: %d  Name: %s People: %d   Landing: %d\n",waiting->id, waiting->idealTime,waiting->name,waiting->people,waiting->timeRequired );
 			if(al)printf("	endif\n");			
 						
                                           
 			
 		}
+		//else waiting->id = idTracker;
+						#ifdef ECHO
+						printf("  -- waiting to land: [#%d: %s,schedule:%d,needed-to-land:%d,#onboard:%d,circled:%d]\n", waiting->id, waiting->name, waiting->idealTime, waiting->timeRequired, waiting->people, waiting->circled);
+						#endif
 		if (waiting->status != 0) {
 			if(al)printf("	if waiting area is not empty then\n");
 			if(debug)printf("\n	else if\n");
-			if (waiting->landTime <= clockDuration){                    //if the waiting plane's time to land <= the time remaining 
+			if (waiting->idealTime <= clockDuration){                    //if the waiting plane's time to land <= the time remaining 
 				if (al) printf("		if plane waiting's arrival time <= clock then\n");
 				for(int i = 0; i < numRunways; i++){
+					if(debug)printf("							is the runway busy (0=no, 1=yes) at runway #%d :%d\n", i+1,r[i].isBusy);
 					if(!r[i].isBusy){
-						if(debug)printf("		is the runway busy (0=no, 1=yes) at runway #%d :%d\n", i,r[i].currentPlane->status);
+						if(debug)printf("		is the runway busy (0=no, 1=yes) at runway #%d :%d\n", i,r[i].isBusy);
 						if(debug)printf("		landing plane on runway\n");
 						if(al)printf("			land a plane onto a runway\n");
-						r[i].currentPlane = waiting;
-						r[i].currentPlane->status = 1;
+						setRunwayData(r, i, waiting, idTracker);
+						
+						r[i].timeLeft = waiting->timeRequired;
 						r[i].isBusy = 1;
-						if(debug)printf("landTime: %d  Name: %s People: %d   Landing: %d\n",waiting->landTime,waiting->name,waiting->people,waiting->timeSpent );
+						#ifdef ECHO
+						printf("  -- landing runway %d: [#%d: %s,schedule:%d,needed-to-land:%d,#onboard:%d,circled:%d]\n", i+1, r[i].currentPlane->id, r[i].currentPlane->name, r[i].currentPlane->idealTime,r[i].currentPlane->timeRequired, r[i].currentPlane->people, r[i].currentPlane->circled);
+						#endif
+						if(al)printf("			set waiting area to empty\n");
+						waiting = setEmpty(waiting, idTracker);
+						//printf("							is the runway busy (0=no, 1=yes) at runway #%d :%d\n", i+1,r[i].isBusy);
+						//printf("id number: %d, idealTime: %d  Name: %s People: %d   time required: %d\n", r[i].currentPlane->id,r[i].currentPlane->idealTime, r[i].currentPlane->name,  r[i].currentPlane->people, r[i].currentPlane->timeRequired);
 						
 						break;
 					}
@@ -172,12 +193,12 @@ if (input[1] == NULL) {
 				}
 				
 				
-				waiting = setEmpty(waiting);//set waiting room to zero (create a function for this)
-				if(al)printf("			set waiting area to empty\n");
+				//set waiting room to zero (create a function for this)
+				
+				
 				if(al)printf("		endif\n");	
 				
-				//printf("landTime: %d  Name: %s People: %d   Landing: %d\n",waiting->landTime,waiting->name,waiting->people,waiting->timeSpent );
-
+				
 			}
 			
 		
@@ -187,18 +208,27 @@ if (input[1] == NULL) {
 
 		
 		if(al)printf("	for all the runways that are busy do\n");   //All functions within this should check for busy status
-			decrementTimes(r, numRunways);
-			if(al)printf("		decrement time left for landing by one\n");
-			selectedRunway = timeIsUp(r, numRunways);
-			printf("\n\nDEBUG:       selectedRunway = %d\n\n", selectedRunway);
-			if(selectedRunway >= 0){
-				if(al)printf("		if time left for landing = 0 then\n");
-				moveOffRunway(r, selectedRunway, numRunways);
-				if(al)printf("			move the plane off of this runway\n");
-				if(al)printf("		endif\n");
-				if(al)printf("	endfor\n");					
-			}
-		clockDuration--;
+	for(int i = 0; i < numRunways; i++){
+				decrementTime(r, i);
+				if(al)printf("		decrement time left for landing by one\n");
+				
+				selectedRunway = timeIsUp(r, i);
+				//printf("\n\nDEBUG:       selectedRunway = %d\n\n", selectedRunway+1);
+				
+				if(selectedRunway >= 0){
+					if(al)printf("		if time left for landing = 0 then\n");
+					moveOffRunway(r, selectedRunway, numRunways);
+					if(al)printf("			move the plane off of this runway\n");
+					if(al)printf("		endif\n");
+					if(al)printf("	endfor\n");
+				}          //printf("							is the runway busy (0=no, 1=yes) at runway #0 :%d\n",r[0].isBusy);				
+				
+			
+		
+	}
+	if(idFlag)idTracker++;
+	clockDuration--;
+	
 	}
 	//
 	//
@@ -231,7 +261,8 @@ if (input[1] == NULL) {
 	//printStats(clockDuration,numRunways);
 	//printf("landTime: %d  Name: %s People: %d   Landing: %d\n",waiting->landTime,waiting->name,waiting->people,waiting->timeSpent );
 	return 0;
-}
+	}
+
 
 FILE *errorCheck(char *fileName){
 	FILE *ptr = fopen(fileName, "r");
@@ -261,20 +292,18 @@ planes moveInto(planes room, FILE* fileName) { //almost works need to figure out
 	//fscanf(fileName, "%d %s %d %d\n ", &room->landTime,room->name,&room->people,&room->timeSpent);
 
 
-	fscanf(fileName, "%d ", &room->landTime);
+	fscanf(fileName, "%d ", &room->idealTime);
 	fscanf(fileName, "%s", room->name);
 	fscanf(fileName, "%d", &room->people);
-	fscanf(fileName, "%d\n", &room->timeSpent);
+	fscanf(fileName, "%d\n", &room->timeRequired);
 	room->status = 1;
-	//printf("landTime: %d  Name: %s People: %d   Landing: %d\n",waiting.landTime,waiting.name,waiting.people,waiting.timeSpent );
+	room->circled = 0;
 	//read into file to find what needs to be added for the plane.
 	//assign these values to what is in waiting room.
-	//printf("landTime: %d  Name: %s People: %d   Landing: %d\n",room->landTime,room->name,room->people,room->timeSpent );
+	
 
 return room;
 }
-
-
 
 
 
@@ -312,33 +341,34 @@ void freeWaiting(planes waitingRoom) {
 	free(waitingRoom);
 }
 
-void decrementTimes(runways * r, int numRunways){
-	for (int i = 0; i < numRunways; i++){
-		if (r[i].currentPlane->status == 1){                  //if the runway has a plane, decrement the time remaining
-			r[i].timeLeft--;                                   //to move it off of the runway
+void decrementTime(runways *r, int i){
+	            
+			if (r[i].isBusy){ 
+			--r[i].timeLeft;
+			//printf("time left for runway #%d after decrement  = %d\n", i+1, r[i].timeLeft);
+			}				
+			
 		}
-	}
-}
+	
 
-planes setEmpty (planes toEmpty) {
 
-toEmpty->id = 0;
-toEmpty->landTime = 0;
+planes setEmpty (planes toEmpty, int idTracker) {
+
+toEmpty->id = idTracker;
+toEmpty->idealTime = 0;
 toEmpty->toLand = 0;
 toEmpty->people = 0;
-toEmpty->timeSpent = 0;
+toEmpty->timeRequired = 0;
 toEmpty->name[0] = '0';
 toEmpty->status = 0;
+toEmpty->circled = 0;
 
 return toEmpty;
 
 }
 
-int timeIsUp(runways* r, int numRunways){                           
-	for (int i = 0; i < numRunways; i++){
-		if (r[i].currentPlane->status && r[i].timeLeft == 0);
-		return i;
-	}
+int timeIsUp(runways* r, int i){                           
+		if (r[i].timeLeft == 0 && r[i].isBusy ) return i;                      
 	return -1;
 }
 
@@ -369,11 +399,31 @@ int amountBusy(runways* listRunways,int totalRunways) {
 }
 
 void moveOffRunway(runways *r, int index, int numRunways){
-	
+	#ifdef ECHO
+	printf("  -- moving off runway #%d: [#%d: %s,schedule:%d,needed-to-land:%d,#onboard:%d,circled:%d]\n", index+1, r[index].currentPlane->id, r[index].currentPlane->name, r[index].currentPlane->idealTime,r[index].currentPlane->timeRequired, r[index].currentPlane->people, r[index].currentPlane->circled);
+	#endif
 	r[index].isBusy = 0;
 	r[index].timeLeft = -1;
 }
 
+void setRunwayData(runways *r, int i, planes p,int idTracker){
+	r[i].currentPlane->id = idTracker;
+	int j = 0;
+	while(p->name[j] != '\0'){
+		r[i].currentPlane->name[j] = p->name[j];
+		j++;
+	}
+	
+
+	r[i].currentPlane->idealTime = p->idealTime;
+	r[i].currentPlane->timeRequired = p->timeRequired;
+	r[i].currentPlane->people = p->people;
+	r[i].currentPlane->circled = p->circled;
+	r[i].currentPlane->status = 1;
+	
+	
+	
+}
 /*
 void printStats(int simLength, int numLanded, int passengers, int runways, float usage, int delayed, int timeDelay){
 printf("Project 4 --Caleb Schwartz & Evan Haaland \n");
