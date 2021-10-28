@@ -1,7 +1,6 @@
 /*
 Project 4 ~ Caleb Schwartz ~ Evan Haaland
-10/16/2021
-C:\Users\caleb\Documents\GitHub\project4
+10/27/2021
 */
 
 #include <stdio.h>
@@ -289,17 +288,23 @@ void setRunwayData(runways *r, int i, planes p,int idTracker){
 void printRunwaysBusy(runways *r, int numRunways){
 	#ifdef ECHO
 	int counter = amountBusy(r, numRunways);
+	int counterCopy = counter;
+	
 	if (counter > 1) printf("\n  -- runways busy: ");
 	else if (counter) printf("\n  -- runway busy: ");
+	
 	for(int i = 0; i < numRunways; i++){
-		if (r[i].isBusy && i < counter-1) printf("#%d,", i+1);
-		else if(r[i].isBusy){
-			 printf("#%d", i+1);
-			 printf(" of %d",numRunways);
+		if (r[i].isBusy){		
+			printf("#%d", i+1);
+		counter--;
+			if (counter != 0){
+				printf(",");
+			}
 		}
+		
 	}
-	
-	
+	if(counterCopy)printf(" of %d", numRunways);
+		
 	#endif
 }
 
